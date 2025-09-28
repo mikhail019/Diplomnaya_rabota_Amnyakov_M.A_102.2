@@ -1,69 +1,104 @@
 import allure
-import requests
-from config import BASE_URL_V1, BASE_URL_V2, CATEGORIES_1, PROD_1, SS_2, PROD_2, SP_2, TOKEN
+import config
+from utils import init_driver, click_element, wait_for_element
+from selenium.webdriver.common.by import By
 
-# Заголовки для API запросов
-headers = {
-    'Authorization': f'Bearer {TOKEN}',
-    "User-Agent": "PostmanRuntime/7.45.0"
-}
+
+def accept_city(driver):
+    click_element(driver, config.CITY_ACCEPT_BUTTON_SELECTOR)
+
 
 @allure.suite("Тесты 'Читай-город'")
-@allure.epic("API_TEST")
-@allure.feature("POSITIVE_TEST")
-@allure.title("Поиск существующего товара")
+@allure.epic("UI_TEST")
+@allure.feature("SEARCH")
+@allure.title("Позитивный тест: Поиск существующей книги")
 @allure.severity("critical")
-def test_search_existing_product():
-    with allure.step("Поиск товара через API"):
-        resp = requests.get(BASE_URL_V2 + SS_2, headers=headers)
-    with allure.step("Получение статус-кода"):
-        assert resp.status_code == 200
-        assert len(resp.json().get('products', [])) > 0  # Проверка, что есть результаты
+def test_search_existing_book():
+    driver = init_driver()
+    try:
+        driver.get("https://www.chitai-gorod.ru/")
+        accept_city(driver)
+        search_box = driver.find_element(By.NAME, "search")  # Замените на актуальный селектор
+        search_box.send_keys("Существующая книга")  # Замените на название существующей книги
+        search_box.submit()
+
+        assert "Результаты поиска" in driver.page_source  # Замените на актуальное сообщение
+    finally:
+        driver.quit()
+
 
 @allure.suite("Тесты 'Читай-город'")
-@allure.epic("API_TEST")
-@allure.feature("NEGATIVE_TEST")
-@allure.title("Получение информации о несуществующей книге")
+@allure.epic("UI_TEST")
+@allure.feature("SEARCH")
+@allure.title("Негативный тест: Поиск несуществующей книги")
 @allure.severity("critical")
-def test_search_non_existent_product():
-    with allure.step("Получение информации о несуществующей книге через API"):
-        resp = requests.get(BASE_URL_V1 + PROD_1, headers=headers)
-    with allure.step("Получение статус-кода"):
-        assert resp.status_code == 404  # Проверка статус-кода для несуществующего продукта
+def test_search_non_existent_book():
+    driver = init_driver()
+    try:
+        driver.get("https://www.chitai-gorod.ru/")
+        accept_city(driver)
+        search_box = driver.find_element(By.NAME, "search")
+        search_box.send_keys("Несуществующая книга")
+        search_box.submit()
+
+        assert "Книги не найдены" in driver.page_source  # Замените на актуальное сообщение
+    finally:
+        driver.quit()
+
 
 @allure.suite("Тесты 'Читай-город'")
-@allure.epic("API_TEST")
-@allure.feature("NEGATIVE_TEST")
-@allure.title("Поиск товара с пустым названием")
+@allure.epic("UI_TEST")
+@allure.feature("SEARCH")
+@allure.title("Негативный тест: Поиск с пустым названием")
 @allure.severity("critical")
 def test_search_empty_title():
-    with allure.step("Поиск товара с пустым названием через API"):
-        resp = requests.get(BASE_URL_V2 + "search/product?customerCityId=213&phrase=&products["
-                                          "page]=1&products[per-page]=48", headers=headers)
-    with allure.step("Получение статус-кода"):
-        assert resp.status_code == 400  # Проверка статус-кода для пустого запроса
+    driver = init_driver()
+    try:
+        driver.get("https://www.chitai-gorod.ru/")
+        accept_city(driver)
+        search_box = driver.find_element(By.NAME, "search")
+        search_box.send_keys("")
+        search_box.submit()
+
+        assert "Пожалуйста, введите название книги" in driver.page_source  # Замените на актуальное сообщение
+    finally:
+        driver.quit()
+
 
 @allure.suite("Тесты 'Читай-город'")
-@allure.epic("API_TEST")
-@allure.feature("NEGATIVE_TEST")
-@allure.title("Поиск товара с недопустимыми символами")
+@allure.epic("UI_TEST")
+@allure.feature("SEARCH")
+@allure.title("Негативный тест: Поиск с недопустимыми символами")
 @allure.severity("critical")
 def test_search_invalid_characters():
-    with allure.step("Поиск товара с недопустимыми символами через API"):
-        resp = requests.get(BASE_URL_V2 + "search/product?customerCityId=213&phrase=@#$%^&*()&products["
-                                          "page]=1&products[per-page]=48", headers=headers)
-    with allure.step("Получение статус-кода"):
-        assert resp.status_code == 400  # Проверка статус-кода для недопустимых символов
+    driver = init_driver()
+    try:
+        driver.get("https://www.chitai-gorod.ru/")
+        accept_city(driver)
+        search_box = driver.find_element(By.NAME, "search")
+        search_box.send_keys("@#$%^&*()")
+        search_box.submit()
+
+        assert "Книги не найдены" in driver.page_source  # Замените на актуальное сообщение
+    finally:
+        driver.quit()
+
 
 @allure.suite("Тесты 'Читай-город'")
-@allure.epic("API_TEST")
-@allure.feature("NEGATIVE_TEST")
-@allure.title("Поиск товара с очень длинным названием")
+@allure.epic("UI_TEST")
+@allure.feature("SEARCH")
+@allure.title("Негативный тест: Поиск с очень длинным названием")
 @allure.severity("critical")
 def test_search_long_title():
     long_title = "A" * 256  # Пример очень длинного названия
-    with allure.step("Поиск товара с очень длинным названием через API"):
-        resp = requests.get(BASE_URL_V2 + f"search/product?customerCityId=213&phrase={
-        long_title}&products[page]=1&products[per-page]=48", headers=headers)
-    with allure.step("Получение статус-кода"):
-        assert resp.status_code == 400  # Проверка статус-кода для слишком длинного названия
+    driver = init_driver()
+    try:
+        driver.get("https://www.chitai-gorod.ru/")
+        accept_city(driver)
+        search_box = driver.find_element(By.NAME, "search")
+        search_box.send_keys(long_title)
+        search_box.submit()
+
+        assert "Книги не найдены" in driver.page_source  # Замените на актуальное сообщение
+    finally:
+        driver.quit()
